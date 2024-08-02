@@ -1,5 +1,4 @@
-from flask import Flask
-from flask import request
+import request
 from threading import Thread
 import time
 import requests
