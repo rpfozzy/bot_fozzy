@@ -103,3 +103,14 @@ def get_gemini_response_special(question, special_message):
 
 if __name__ == "__main__":
     bot.polling()
+
+# Add this configuration to your Vite server setup
+vite_config = {
+    "plugins": ["react()"],
+    "server": {
+        "host": True,
+        "strictPort": True,
+        "port": 8000
+    },
+    "resolve": {}
+}
