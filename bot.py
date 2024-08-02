@@ -103,5 +103,4 @@ def get_gemini_response_special(question, special_message):
         return "извините, произошла ошибка при обработке запроса"
 
 if __name__ == "__main__":
-    keep_alive()
 bot.polling()
