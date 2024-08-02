@@ -1,6 +1,10 @@
+import os
+import pip
+pip.main(['install', 'pytelegrambotapi'])
 import telebot
 import requests
 import time
+from background import keep_alive
 
 API_KEY = '6487715421:AAG4WeqsWG_8FkxQbbbZbHDqeDadF-0Ir1g'
 GEMINI_API_KEY = 'AIzaSyDlIJZ3gAae5S_owNcETNahJvLYwPpFEwA'
@@ -102,15 +106,5 @@ def get_gemini_response_special(question, special_message):
         return "извините, произошла ошибка при обработке запроса"
 
 if __name__ == "__main__":
-    bot.polling()
-
-# Add this configuration to your Vite server setup
-vite_config = {
-    "plugins": ["react()"],
-    "server": {
-        "host": True,
-        "strictPort": True,
-        "port": 8000
-    },
-    "resolve": {}
-}
+    keep_alive()
+bot.polling(non_stop=True, interval=0)
