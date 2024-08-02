@@ -102,4 +102,4 @@ def get_gemini_response_special(question, special_message):
         return "извините, произошла ошибка при обработке запроса"
 
 if __name__ == "__main__":
-    bot.polling()
+    bot.infinity_polling(none_stop=True)
